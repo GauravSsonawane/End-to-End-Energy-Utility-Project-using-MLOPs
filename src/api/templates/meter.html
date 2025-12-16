@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartGrid Predict — Dashboard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Chart.js for simple charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#0b1220;
+      --accent:#3b82f6;
+      --muted: #9aa4bf;
+      --glass: rgba(255,255,255,0.03);
+      --radius:12px;
+      color-scheme: dark;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#081027 0%, #0b1b3a 100%); color:#e6eef8;}
+    .app {
+      max-width:1200px;
+      margin:20px auto;
+      display:grid;
+      grid-template-columns: 260px 1fr;
+      gap:20px;
+      padding:18px;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:var(--radius);
+      padding:18px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      height: calc(100vh - 80px);
+      position:sticky;
+      top:16px;
+      overflow:auto;
+    }
+    .brand { font-weight:700; font-size:20px; color:var(--accent); margin-bottom:6px; }
+    .brand-sub { font-size:12px; color:var(--muted); margin-bottom:18px; }
+    .control { margin-bottom:14px; }
+    .control label { font-size:13px; color:var(--muted); display:block; margin-bottom:6px; }
+    .range { width:100%; -webkit-appearance:none; height:8px; border-radius:8px; background:linear-gradient(90deg,var(--accent), #7c3aed); outline:none; }
+    .pill { background:var(--glass); padding:8px 10px; border-radius:10px; color:#cfe6ff; font-weight:600; display:inline-block; min-width:84px; text-align:center; }
+
+    .btn {
+      display:block;
+      width:100%;
+      padding:10px;
+      background:linear-gradient(90deg,var(--accent), #7c3aed);
+      color:white;
+      border:none;
+      border-radius:10px;
+      font-weight:700;
+      cursor:pointer;
+      margin-top:8px;
+      box-shadow:0 8px 24px rgba(59,130,246,0.12);
+    }
+
+    /* Main content */
+    .main {
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+    .row {
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:18px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.015));
+      border-radius:12px;
+      padding:16px;
+      box-shadow: 0 10px 36px rgba(2,6,23,0.6);
+      min-height:120px;
+    }
+    .card h3 { margin:0; font-size:14px; color:#dbeafe; }
+    .metric { font-weight:800; font-size:22px; margin-top:6px; color:#fff; }
+    .muted { color:var(--muted); font-size:13px; margin-top:6px; }
+
+    .chart-card { grid-column: span 2; min-height:260px; display:flex; flex-direction:column; }
+    canvas{ width:100% !important; height:220px !important; }
+
+    /* responsive */
+    @media(max-width:1000px){
+      .app { grid-template-columns: 1fr; padding:12px; }
+      .row { grid-template-columns: 1fr; }
+      .chart-card { grid-column: auto; }
+      .sidebar { height:auto; position:relative; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar card">
+      <div class="brand">⚡ SmartGrid Predict</div>
+      <div class="brand-sub">Dashboard • Electricity forecast</div>
+
+      <div class="control">
+        <label>Voltage <span style="float:right;" id="v-pill">220 V</span></label>
+        <input id="voltage" class="range" type="range" min="50" max="500" step="1" value="220">
+      </div>
+
+      <div class="control">
+        <label>Temperature <span style="float:right;" id="t-pill">25 °C</span></label>
+        <input id="temperature" class="range" type="range" min="-20" max="120" step="1" value="25">
+      </div>
+
+      <div class="control">
+        <label>Power Factor <span style="float:right;" id="pf-pill">0.95</span></label>
+        <input id="power_factor" class="range" type="range" min="0" max="1" step="0.01" value="0.95">
+      </div>
+
+      <div class="control">
+        <label>Load (kW) <span style="float:right;" id="load-pill">50 kW</span></label>
+        <input id="load_kw" class="range" type="range" min="0" max="500" step="1" value="50">
+      </div>
+
+      <div class="control">
+        <label>Frequency (Hz) <span style="float:right;" id="f-pill">50 Hz</span></label>
+        <input id="frequency_hz" class="range" type="range" min="40" max="100" step="1" value="50">
+      </div>
+
+      <button id="predictBtn" class="btn">🔮 Predict</button>
+      <div style="margin-top:12px; font-size:13px; color:var(--muted)">Status: <span id="status">Ready</span></div>
+    </aside>
+
+    <main class="main">
+      <div class="row">
+        <div class="card">
+          <h3>Predicted Consumption</h3>
+          <div class="metric" id="predicted-main">— — kWh</div>
+          <div class="muted">Live model prediction</div>
+        </div>
+
+        <div class="card">
+          <h3>Voltage</h3>
+          <div class="metric" id="card-voltage">220 V</div>
+          <div class="muted">Grid voltage</div>
+        </div>
+
+        <div class="card">
+          <h3>Load</h3>
+          <div class="metric" id="card-load">50 kW</div>
+          <div class="muted">Current load</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card chart-card">
+          <h3>Consumption over time</h3>
+          <canvas id="lineChart"></canvas>
+          <div class="muted" style="margin-top:8px;">New predictions are appended on each run</div>
+        </div>
+
+        <div class="card">
+          <h3>Key metrics</h3>
+          <div style="margin-top:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+              <div><div style="font-size:12px;color:var(--muted)">Power Factor</div><div class="metric" id="card-pf">0.95</div></div>
+              <div><div style="font-size:12px;color:var(--muted)">Temperature</div><div class="metric" id="card-temp">25 °C</div></div>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <div><div style="font-size:12px;color:var(--muted)">Frequency</div><div class="metric" id="card-f">50 Hz</div></div>
+              <div><div style="font-size:12px;color:var(--muted)">Last Run</div><div class="metric" id="card-last">—</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <h3>Recent predictions</h3>
+          <div id="history" style="margin-top:10px; color:var(--muted); font-size:13px;">No runs yet</div>
+        </div>
+
+        <div class="card">
+          <h3>Notes</h3>
+          <div class="muted" style="margin-top:8px;">
+            This UI posts JSON to <code>/predict</code> with the keys:
+            <code>voltage, temperature, power_factor, load_kw, frequency_hz</code>.
+            Predictions should return JSON containing at least <code>predicted_units</code> (kWh).
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Quick actions</h3>
+          <div style="margin-top:10px;">
+            <button id="resetBtn" class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);box-shadow:none">Reset sliders</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+  // Elements
+  const S = {
+    voltage: document.getElementById('voltage'),
+    temperature: document.getElementById('temperature'),
+    power_factor: document.getElementById('power_factor'),
+    load_kw: document.getElementById('load_kw'),
+    frequency_hz: document.getElementById('frequency_hz'),
+    v_pill: document.getElementById('v-pill'),
+    t_pill: document.getElementById('t-pill'),
+    pf_pill: document.getElementById('pf-pill'),
+    load_pill: document.getElementById('load-pill'),
+    f_pill: document.getElementById('f-pill'),
+    predictBtn: document.getElementById('predictBtn'),
+    status: document.getElementById('status'),
+    predicted_main: document.getElementById('predicted-main'),
+    card_voltage: document.getElementById('card-voltage'),
+    card_load: document.getElementById('card-load'),
+    card_pf: document.getElementById('card-pf'),
+    card_temp: document.getElementById('card-temp'),
+    card_f: document.getElementById('card-f'),
+    card_last: document.getElementById('card-last'),
+    history: document.getElementById('history')
+  };
+
+  // display update
+  function updatePills(){
+    S.v_pill.textContent = S.voltage.value + ' V';
+    S.t_pill.textContent = S.temperature.value + ' °C';
+    S.pf_pill.textContent = Number(S.power_factor.value).toFixed(2);
+    S.load_pill.textContent = S.load_kw.value + ' kW';
+    S.f_pill.textContent = S.frequency_hz.value + ' Hz';
+
+    S.card_voltage.textContent = S.voltage.value + ' V';
+    S.card_load.textContent = S.load_kw.value + ' kW';
+    S.card_pf.textContent = Number(S.power_factor.value).toFixed(2);
+    S.card_temp.textContent = S.temperature.value + ' °C';
+    S.card_f.textContent = S.frequency_hz.value + ' Hz';
+  }
+
+  ['voltage','temperature','power_factor','load_kw','frequency_hz'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updatePills);
+  });
+  updatePills();
+
+  // Line chart
+  const ctx = document.getElementById('lineChart').getContext('2d');
+  const lineData = { labels: [], datasets: [{ label: 'kWh', data: [], tension:0.3, fill:true, borderWidth:2 }] };
+  const chart = new Chart(ctx, {
+    type:'line',
+    data: lineData,
+    options:{
+      responsive:true,
+      plugins:{ legend:{ display:false }},
+      scales:{
+        x:{ display:true, grid:{ color:'rgba(255,255,255,0.03)'} },
+        y:{ display:true, grid:{ color:'rgba(255,255,255,0.03)'} }
+      }
+    }
+  });
+
+  // History array
+  const runs = [];
+
+  function appendRun(obj){
+    // obj: {time, predicted}
+    runs.unshift(obj);
+    if(runs.length>8) runs.pop();
+
+    // update history DOM
+    S.history.innerHTML = runs.map(r=>`<div style="padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.03)"><strong>${r.predicted} kWh</strong><div style="color:var(--muted);font-size:12px">${r.time}</div></div>`).join('');
+    S.card_last.textContent = runs[0].time;
+  }
+
+  // Predict function
+  async function callPredict(){
+    S.predictBtn.disabled = true;
+    S.status.textContent = 'Predicting...';
+    S.predicted_main.textContent = '— — kWh';
+
+    const payload = {
+      voltage: Number(S.voltage.value),
+      temperature: Number(S.temperature.value),
+      power_factor: Number(S.power_factor.value),
+      load_kw: Number(S.load_kw.value),
+      frequency_hz: Number(S.frequency_hz.value)
+    };
+
+    try {
+      const resp = await fetch('/predict', {
+        method:'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok){
+        const text = await resp.text();
+        S.status.textContent = 'Error';
+        console.error('Predict error', resp.status, text);
+        S.predicted_main.textContent = 'err';
+        return;
+      }
+
+      const data = await resp.json();
+      // prefer data.predicted_units, fallback to other names
+      const predicted = (data.predicted_units ?? data.prediction ?? data.predicted ?? data.value ?? null);
+
+      const value = (predicted !== null) ? Number(predicted).toFixed(3) : 'n/a';
+      S.predicted_main.textContent = (value==='n/a' ? 'n/a' : `${value} kWh`);
+      S.status.textContent = 'Done';
+
+      // append to chart and history
+      const time = new Date().toLocaleTimeString();
+      chart.data.labels.push(time);
+      chart.data.datasets[0].data.push(Number(predicted) || 0);
+      if(chart.data.labels.length>12){
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      chart.update();
+
+      appendRun({ time, predicted: value });
+
+    } catch (err){
+      console.error(err);
+      S.status.textContent = 'Network error';
+      S.predicted_main.textContent = 'err';
+    } finally {
+      S.predictBtn.disabled = false;
+    }
+  }
+
+  document.getElementById('predictBtn').addEventListener('click', callPredict);
+
+  // Reset button
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    S.voltage.value = 220; S.temperature.value = 25; S.power_factor.value = 0.95;
+    S.load_kw.value = 50; S.frequency_hz.value = 50;
+    updatePills();
+  });
+
+  // allow Enter
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Enter') callPredict(); });
+
+</script>
+</body>
+</html>
