@@ -18,8 +18,6 @@ This repository implements an end-to-end MLOps pipeline across two representativ
 
 Electricity / Smart-Meter Load Forecasting (Regression)
 
-Loan Default / Approval Prediction (Classification)
-
 The project demonstrates how production-ready ML systems are built by combining data ingestion, orchestration, experiment tracking, model serving, and containerized infrastructure using modern MLOps tools.
 
 🧱 Architecture at a Glance
