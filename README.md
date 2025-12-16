@@ -55,12 +55,6 @@ Features: voltage, temperature, power factor, load, frequency
 
 Metrics: MSE, R²
 
-Loan Prediction (train_loan.py)
-
-Logistic Regression
-
-One-hot encoded categorical features
-
 Metric: Accuracy
 
 🔹 Data Ingestion
@@ -129,43 +123,3 @@ drift_detector.py exists as a placeholder for future data/model drift detection
 ✔ Shared artifact store across services
 ✔ Explicit metric passing using XComs
 ✔ Basic data quality checks at ingestion
-
-⚠️ Known Gaps & Future Improvements
-
-🔸 No formal schema validation (recommend Pandera / Great Expectations)
-
-🔸 No automated tests or CI/CD pipeline
-
-🔸 Secrets stored in compose env vars (recommend vault / env-specific secrets)
-
-🔸 Airflow & MLflow UIs lack production-grade authentication
-
-🔸 Drift detection logic not yet implemented
-
-🚀 How to Run
-docker-compose up -d
-
-
-Airflow UI: Trigger DAGs from the web interface
-
-MLflow UI: Available on mapped port (default: 5500)
-
-Model API: Exposed via model_api service (default: 5501)
-
-⚠️ Ensure ports and credentials in docker-compose.yml match your environment.
-
-🧠 Integrity & Trustworthiness Summary
-
-This project demonstrates strong MLOps fundamentals:
-
-Modular training code
-
-Pipeline orchestration
-
-Experiment tracking
-
-Artifact versioning
-
-Reproducible infrastructure
-
-With schema validation, CI/CD, drift detection, and secrets management added, this system can be elevated to production-grade ML infrastructure.
