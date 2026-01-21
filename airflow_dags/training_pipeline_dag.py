@@ -42,3 +42,20 @@ with DAG(
     train_model_task >> log_model_task
 
     print("✅ [DAG PARSE] DAG meter_training_pipeline_dag is fully defined.")
+
+    # --- New Prophet Tasks ---
+    from src.models.train_timeseries import train_prophet_model, log_prophet_to_mlflow
+
+    train_prophet_task = PythonOperator(
+        task_id="train_prophet_model",
+        python_callable=train_prophet_model,
+        provide_context=True,
+    )
+
+    log_prophet_task = PythonOperator(
+        task_id="log_prophet_to_mlflow",
+        python_callable=log_prophet_to_mlflow,
+        provide_context=True,
+    )
+
+    train_prophet_task >> log_prophet_task

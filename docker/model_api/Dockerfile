@@ -1,7 +1,7 @@
 FROM python:3.10-slim
 
 # Install dependencies
-RUN pip install --no-cache-dir fastapi uvicorn scikit-learn joblib pandas dill
+RUN pip install --no-cache-dir fastapi uvicorn scikit-learn joblib pandas dill prophet jinja2 python-multipart
 
 WORKDIR /app
 COPY src/ /app/src

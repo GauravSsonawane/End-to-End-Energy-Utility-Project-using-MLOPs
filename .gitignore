@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project Artifacts
+mlflow_artifacts/
+airflow_logs/
+src/models/artifacts/
+*.pkl
+*.joblib
+
+# OS
+.DS_Store
+Thumbs.db
